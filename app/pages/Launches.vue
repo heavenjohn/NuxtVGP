@@ -43,6 +43,11 @@
 					<td>{{ launch.launch_site?.site_name ?? 'Unknown' }}</td>
 					<td>{{ launch.rocket?.rocket_name ?? 'Unknown' }}</td>
 					<td>{{ launch.details ?? 'N/A' }}</td>
+					<td>
+						<NuxtLink :to="launch.rocket?.id ? `/rocket/${launch.rocket.id}` : '#'">
+							{{ launch.rocket?.rocket_name ?? 'Unknown' }}
+						</NuxtLink>
+					</td>
 				</tr>
 			</tbody>
 		</v-table>
@@ -58,7 +63,11 @@ interface Launch {
 	mission_name: string
 	launch_date_local: string
 	launch_site: { site_name: string }
-	rocket: { rocket_name: string }
+	rocket?: {
+		id: string
+		rocket_type?: string
+		rocket_name: string
+	}
 	details: string | null
 }
 
@@ -72,7 +81,9 @@ const GET_LAUNCHES = gql`
 				site_name
 			}
 			rocket {
+				id
 				rocket_name
+				rocket_type
 			}
 			details
 		}
@@ -82,15 +93,14 @@ const GET_LAUNCHES = gql`
 // fetch API's
 const { result, loading, error, load } = useLazyQuery(GET_LAUNCHES)
 // Computed launches array
-const launches = computed(() => result.value?.launchesPast ?? [])
+const launches = computed<Launch[]>(() => result.value?.launchesPast ?? [])
 // Fillter state
 const selectedYear = ref('all')
 
 const filteredLaunches = computed(() => {
 	if (selectedYear.value === 'all') return launches.value
-	return launches.value.filters(
-		(l: { launch_date_local: string | number | Date }) =>
-			new Date(l.launch_date_local).getFullYear().toString() === selectedYear.value,
+	return launches.value.filter(
+		(l) => new Date(l.launch_date_local).getFullYear().toString() === selectedYear.value,
 	)
 })
 // Computed Filtered Launches
