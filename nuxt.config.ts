@@ -6,11 +6,6 @@ export default defineNuxtConfig({
 	build: { transpile: ['vuetify'] },
 	imports: { dirs: ['./stores'] },
 
-	// redirect launche
-	routeRules: {
-		'/': { redirect: '/launches' },
-	},
-
 	apollo: {
 		autoImports: true,
 		proxyCookies: true,

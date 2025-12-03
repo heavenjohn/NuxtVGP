@@ -1,32 +1,33 @@
 <template>
 	<v-container>
 		<div v-if="loading">Loading rocket details...</div>
-		<div v-if="error">Error fetching data.</div>
+		<div v-else-if="error">Error fetching rocket</div>
+		<div v-else-if="!rocket">Rocket not found</div>
 
-		<div v-if="rocket">
+		<div v-else>
 			<h2>{{ rocket.name }}</h2>
 			<p>{{ rocket.description }}</p>
 
 			<v-list>
 				<v-list-item>
 					<strong>First Flight:</strong>
-					{{ rocket?.first_flight ?? 'N/A' }}
+					{{ rocket.first_flight ?? 'N/A' }}
 				</v-list-item>
 				<v-list-item>
 					<strong>Height:</strong>
-					{{ rocket?.height.meters ?? 'N/A' }} m / {{ rocket.height.feet ?? 'N/A' }} ft
+					{{ rocket.height?.meters ?? 'N/A' }} m / {{ rocket.height?.feet ?? 'N/A' }} ft
 				</v-list-item>
 				<v-list-item>
 					<strong>Diameter:</strong>
-					{{ rocket?.diameter?.meters ?? 'n/a' }} m / {{ rocket?.diameter?.feet ?? 'n/a' }} ft
+					{{ rocket.diameter?.meters ?? 'N/A' }} m / {{ rocket.diameter?.feet ?? 'N/A' }} ft
 				</v-list-item>
 				<v-list-item>
 					<strong>Mass:</strong>
-					{{ rocket?.mass?.kg ?? 'n/a' }} kg / {{ rocket?.mass?.lb ?? 'n/a' }} lb
+					{{ rocket.mass?.kg ?? 'N/A' }} kg / {{ rocket.mass?.lb ?? 'N/A' }} lb
 				</v-list-item>
 				<v-list-item>
 					<strong>Stages:</strong>
-					{{ rocket?.stages ?? 'n/a' }}
+					{{ rocket.stages ?? 'N/A' }}
 				</v-list-item>
 			</v-list>
 		</div>
@@ -39,11 +40,9 @@ import { gql } from 'graphql-tag'
 import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 
-// Get rocket ID from Route params
 const route = useRoute()
 const rocketId = route.params.id as string
 
-// GraphQl query for a signle rocket
 const GET_ROCKET = gql`
 	query getRocket($id: ID!) {
 		rocket(id: $id) {
@@ -68,13 +67,11 @@ const GET_ROCKET = gql`
 	}
 `
 
-// Fetch the rocket data
 const { result, loading, error, load } = useLazyQuery(GET_ROCKET, { id: rocketId })
 
-//computed property for easier access
-const rocket = computed(() => result.value?.rocket ?? {})
+// Safely access the rocket object
+const rocket = computed(() => result.value?.rocket ?? null)
 
-//Load data when component mounts
 onMounted(() => {
 	load()
 })
