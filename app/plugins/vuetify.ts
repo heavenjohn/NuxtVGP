@@ -1,4 +1,6 @@
 import { createVuetify } from 'vuetify'
+import * as components from 'vuetify/components'
+import * as directives from 'vuetify/directives'
 import * as labs from 'vuetify/labs/components'
 import 'vuetify/styles'
 // Use this if you want only icons used by Vuetify components internally should be imported
@@ -7,6 +9,7 @@ import '@mdi/font/css/materialdesignicons.css' // Ensure you are using css-loade
 export default defineNuxtPlugin((nuxtApp) => {
 	const vuetify = createVuetify({
 		components: { ...labs },
+		directives,
 		// Refer to https://vuetifyjs.com/en/features/icon-fonts/
 		// icons: { defaultSet: 'mdi', aliases, sets: { mdi } },
 		ssr: true,
