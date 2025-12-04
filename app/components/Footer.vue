@@ -1,5 +1,5 @@
 <template>
-	<v-footer app color="gray-draken-3" dark>
+	<v-footer app dark>
 		<v-container>
 			<p class="test-center">2025 SpaceX Project - HeavenJohn - All rights reserved.</p>
 		</v-container>

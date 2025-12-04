@@ -1,40 +1,45 @@
 <template>
 	<v-container fluid class="launches-bg py-10">
 		<v-row justify="center">
-			<v-col cols="12" md="10" lg="8">
-				<!-- Page Header -->
-				<div class="d-flex align-center mb-6 page-header">
-					<v-icon icon="mdi-rocket-launch" size="40" class="mr-3 text-white" />
+			<v-col cols="12" md="12" lg="11" xl="10">
+				<!-- PAGE HEADER -->
+				<div class="d-flex align-center mb-8 page-header">
+					<v-icon icon="mdi-rocket-launch" size="44" class="mr-3 text-accent" />
 					<h1 class="page-title">SpaceX Launches</h1>
 				</div>
 
-				<!-- Loading / Error -->
+				<!-- LOADING / ERROR -->
 				<v-alert v-if="loading" type="info" variant="tonal" class="mb-4 glass-card">
-					Fetching launch data…
-				</v-alert>
-				<v-alert v-if="error" type="error" variant="tonal" class="mb-4 glass-card">
-					Error loading data. Please try again.
+					Fetching latest launches...
 				</v-alert>
 
-				<!-- Filters -->
-				<v-card class="pa-6 mb-8 glass-card">
-					<h3 class="mb-4 text-white">Filters</h3>
+				<v-alert v-if="error" type="error" variant="tonal" class="mb-4 glass-card">
+					Unable to load launch data.
+				</v-alert>
+
+				<!-- FILTERS CARD -->
+				<v-card class="pa-6 mb-10 glass-card" elevation="4">
+					<h3 class="filter-title mb-6">Filters</h3>
+
 					<v-row>
 						<v-col cols="12" md="6">
 							<v-select
 								v-model="selectedYear"
-								label="Filter by Year"
 								:items="years"
-								variant="solo-filled"
+								label="Filter by Launch Year"
 								prepend-inner-icon="mdi-calendar"
+								variant="solo-filled"
+								density="comfortable"
 							/>
 						</v-col>
+
 						<v-col cols="12" md="6">
 							<v-select
 								v-model="sortOrder"
-								label="Sort by Date"
+								label="Sort by Launch Date"
+								prepend-inner-icon="mdi-sort-clock-descending-outline"
 								variant="solo-filled"
-								prepend-inner-icon="mdi-sort"
+								density="comfortable"
 								:items="[
 									{ title: 'Newest First', value: 'desc' },
 									{ title: 'Oldest First', value: 'asc' },
@@ -44,30 +49,34 @@
 					</v-row>
 				</v-card>
 
-				<!-- Launch Table -->
-				<v-card elevation="4" class="glass-card">
+				<!-- LAUNCH TABLE -->
+				<v-card class="glass-card" elevation="6">
 					<v-table v-if="launches.length" class="launch-table">
 						<thead>
 							<tr>
 								<th>Mission</th>
 								<th>Date</th>
-								<th>Site</th>
+								<th>Launch Site</th>
 								<th>Rocket</th>
-								<th>Favorite</th>
 								<th>Details</th>
+								<th>Favorite</th>
 							</tr>
 						</thead>
+
 						<tbody>
 							<tr
 								v-for="launch in sortedFilterLaunches"
 								:key="launch.mission_name"
 								class="launch-row"
 							>
-								<td>{{ launch.mission_name }}</td>
-								<td>{{ new Date(launch.launch_date_local).toLocaleString() }}</td>
+								<td class="mission-name">
+									{{ launch.mission_name }}
+								</td>
+
+								<td>{{ new Date(launch.launch_date_local).toLocaleDateString() }}</td>
+
 								<td>{{ launch.launch_site?.site_name ?? 'Unknown' }}</td>
 
-								<!-- Rocket Name with Link -->
 								<td>
 									<NuxtLink
 										v-if="launch.rocket?.rocket"
@@ -76,29 +85,22 @@
 									>
 										{{ launch.rocket.rocket_name }}
 									</NuxtLink>
-									<span v-else class="text-muted">Unknown</span>
-								</td>
 
-								<!-- Details -->
-								<td>{{ launch.details ?? 'N/A' }}</td>
-								<!-- Favorite Button -->
+									<span v-else class="text-muted">Unavailable</span>
+								</td>
+								<td class="details-col">
+									{{ launch.details ?? 'N/A' }}
+								</td>
 								<td>
 									<v-btn
 										icon
-										:color="
-											launch.rocket?.rocket && isFavorite(launch.rocket.rocket)
-												? 'pink'
-												: 'grey'
-										"
+										:color="launch.isFavorite ? 'pink' : 'grey'"
 										:disabled="!launch.rocket?.rocket"
-										@click="launch.rocket?.rocket && toggleFavorite(launch.rocket)"
+										size="small"
+										@click="toggleRowFavorite(launch)"
 									>
 										<v-icon>
-											{{
-												launch.rocket?.rocket && isFavorite(launch.rocket.rocket)
-													? 'mdi-heart'
-													: 'mdi-heart-outline'
-											}}
+											{{ launch.isFavorite ? 'mdi-heart' : 'mdi-heart-outline' }}
 										</v-icon>
 									</v-btn>
 								</td>
@@ -106,8 +108,8 @@
 						</tbody>
 					</v-table>
 
-					<!-- Empty State -->
-					<div v-else class="text-center py-10 text-grey-lighten-2">
+					<!-- EMPTY STATE -->
+					<div v-else class="text-center py-10 text-grey-lighten-1">
 						No launches match your filters.
 					</div>
 				</v-card>
@@ -120,21 +122,19 @@
 import { useMyFavoritesStore } from '@/stores/favorites'
 import { useLazyQuery } from '@vue/apollo-composable'
 import { gql } from 'graphql-tag'
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 interface Launch {
 	mission_name: string
 	launch_date_local: string
 	launch_site: { site_name: string }
-	rocket: {
-		rocket_type: string
-		rocket_name: string
-		rocket: { id: string }
-	} | null
+	rocket: { rocket_name: string; rocket_type: string; rocket: { id: string } } | null
 	details: string | null
+	isFavorite?: boolean
 }
 
-// Apollo GraphQL
+const favoritesStore = useMyFavoritesStore()
+
 const GET_LAUNCHES = gql`
 	query getLaunches {
 		launchesPast(limit: 20) {
@@ -144,8 +144,8 @@ const GET_LAUNCHES = gql`
 				site_name
 			}
 			rocket {
-				rocket_type
 				rocket_name
+				rocket_type
 				rocket {
 					id
 				}
@@ -156,7 +156,7 @@ const GET_LAUNCHES = gql`
 `
 
 const { result, loading, error, load } = useLazyQuery(GET_LAUNCHES)
-const launches = computed(() => (result.value?.launchesPast ?? []) as Launch[])
+const launches = ref<Launch[]>([])
 
 // Filters
 const selectedYear = ref('all')
@@ -184,60 +184,110 @@ const years = computed(() => {
 	return ['all', ...Array.from(set)]
 })
 
-// Pinia favorites store
-const favoritesStore = useMyFavoritesStore()
-
-// Toggle favorite
-const toggleFavorite = (rocketData: { rocket_name: string; rocket_type: string; rocket: { id: string } }) => {
-	favoritesStore.toggleFavorite({
-		id: rocketData.rocket.id,
-		rocket_name: rocketData.rocket_name,
-		rocket_type: rocketData.rocket_type,
-	})
+// --- FAVORITES HANDLERS ---
+// Check if rocket is favorite
+const isFavorite = (rocket: Launch['rocket']) => {
+	if (!rocket?.rocket) return false
+	return favoritesStore.favorites.some((r) => r.id === rocket.rocket.id)
 }
 
-// Check if rocket is favorite
-const isFavorite = (rocket: { id: string }) => favoritesStore.favorites.some((f) => f.id === rocket.id)
+// Toggle favorite and save to store
+const toggleRowFavorite = (launch: Launch) => {
+	if (!launch.rocket?.rocket) return
+	const rocketData = {
+		id: launch.rocket.rocket.id,
+		rocket_name: launch.rocket.rocket_name,
+		rocket_type: launch.rocket.rocket_type,
+	}
+	favoritesStore.toggleFavorite(rocketData)
+	launch.isFavorite = isFavorite(launch.rocket) // update local row color
+}
 
-load()
+// Load launches
+onMounted(async () => {
+	await load()
+	launches.value = (result.value?.launchesPast ?? []).map((l: any) => ({
+		...l,
+		isFavorite: l.rocket ? isFavorite(l.rocket) : false,
+	}))
+})
 </script>
 
 <style scoped>
+/* Background stays dark, but text will be brighter */
 .launches-bg {
-	background: linear-gradient(160deg, #020617 0%, #0b1225 50%, #111827 100%);
 	min-height: 100vh;
-	padding-bottom: 60px;
+	background: #ffffff;
 }
+
+/* PAGE TITLE */
 .page-title {
-	color: white;
-	font-size: 32px;
+	color: #000;
+	font-size: 38px;
+	font-weight: 800;
+}
+
+/* LIGHTER accent icon */
+.text-accent {
+	color: #93c5fd;
+}
+
+/* FILTER TITLE */
+.filter-title {
+	color: #000;
+	font-size: 20px;
 	font-weight: 700;
 }
+
+/* VERY READABLE GLASS CARD */
 .glass-card {
-	background: rgba(255, 255, 255, 0.06);
-	border: 1px solid rgba(255, 255, 255, 0.1);
-	backdrop-filter: blur(8px);
-	border-radius: 18px !important;
-}
-.launch-table {
-	color: black;
-}
-.launch-table th {
 	background: rgba(255, 255, 255, 0.12);
-	color: #cbd5e1;
-	font-size: 14px;
+	border-radius: 18px;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	backdrop-filter: blur(8px);
 }
-.launch-row {
-	transition: background 0.2s ease;
+
+/* TABLE HEADER — BRIGHTER */
+.launch-table th {
+	background: rgba(255, 255, 255, 0.18);
+	color: #000;
+	font-weight: 700;
+	font-size: 15px;
+	padding: 14px;
 }
+
+/* TABLE TEXT — MUCH BRIGHTER */
+.launch-table td {
+	color: #000;
+	font-size: 15px;
+	padding: 14px;
+}
+
+/* ROW HOVER */
 .launch-row:hover {
-	background: rgba(255, 255, 255, 0.1);
+	background: rgba(255, 255, 255, 0.22);
 }
+
+/* LINKS */
 .rocket-link {
 	color: #60a5fa;
-	text-decoration: none;
+	font-weight: 700;
 }
+
 .rocket-link:hover {
+	color: #93c5fd;
 	text-decoration: underline;
+}
+
+/* DETAILS COLUMN MORE READABLE */
+.details-col {
+	max-width: 260px;
+	white-space: normal;
+	color: #000;
+}
+
+.mission-name {
+	font-weight: 800;
+	color: #000;
 }
 </style>

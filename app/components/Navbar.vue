@@ -10,6 +10,8 @@
 		<div class="d-none d-sm-flex align-center">
 			<NuxtLink to="/" class="nav-link mx-3">Home</NuxtLink>
 
+			<NuxtLink to="/favorites" class="nav-link mx-3">Favorites</NuxtLink>
+
 			<!-- Rocket Dropdown -->
 			<v-menu>
 				<template #activator="{ props }">
@@ -32,6 +34,10 @@
 		<v-list>
 			<v-list-item to="/">
 				<v-list-item-title>Home</v-list-item-title>
+			</v-list-item>
+
+			<v-list-item to="/favorites">
+				<v-list-item-title>Favorites</v-list-item-title>
 			</v-list-item>
 
 			<v-list-subheader>Rockets</v-list-subheader>
